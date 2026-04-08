@@ -5,7 +5,7 @@
 
 ## 目标
 
-本文档说明如何把 Claudeception 的“技能沉淀自检”接入 Codex 的 `Stop` Hook，做到：
+本文档基于当前 `~/.codex/hooks.json` 的真实结构，说明如何把 Claudeception 的“技能沉淀自检”接入 Codex 的 `Stop` Hook，做到：
 
 1. 每次准备结束当前请求时，自动检查本轮是否产生了可复用知识
 2. 如果还没给出明确的“技能沉淀结论”，阻止本次结束
@@ -37,11 +37,11 @@
 /path/to/hook
 ```
 
-那么 `~/.codex/hooks.json` 可以写成：
+那么 `~/.codex/hooks.json` 可以按你当前本机格式写成：
 
 ```json
 {
-  "description": "Codex 全局 hooks",
+  "description": "Codex 全局 hooks，模仿 ~/.claude/settings.json 的核心行为",
   "hooks": {
     "Stop": [
       {
@@ -78,7 +78,7 @@ cp /path/to/hook/resources/skill-sedimentation-standard-prompt.md ~/.codex/promp
 chmod +x ~/.codex/hooks/codex-claudeception-stop-hook.py
 ```
 
-此时 `~/.codex/hooks.json` 参考配置：
+此时 `~/.codex/hooks.json` 也建议继续沿用你当前这套格式：
 
 ```json
 {
@@ -106,7 +106,7 @@ chmod +x ~/.codex/hooks/codex-claudeception-stop-hook.py
 这个 Stop Hook 的逻辑是：
 
 1. Codex 在本轮准备结束时触发 `Stop`
-2. Hook 脚本从标准输入读取 Hook 上下文
+2. Hook 脚本从标准输入读取 Hook 上下文（即 Codex 传给 command hook 的 JSON）
 3. 它会优先读取最后一条 assistant 回复
 4. 如果最后一条回复里已经包含：
 
@@ -198,14 +198,26 @@ chmod +x ~/.codex/hooks/codex-claudeception-stop-hook.py
 
 ## 常见问题
 
-### 1）为什么建议挂在 `Stop` 而不是更早的事件？
+### 1）为什么文档里直接按 `~/.codex/hooks.json` 的 `Stop` 结构来写？
+
+因为你当前本机已经验证在用的就是这套结构：
+
+- 顶层文件：`~/.codex/hooks.json`
+- 事件：`Stop`
+- hook 类型：`command`
+- 返回控制：`continue` / `decision=block`
+
+所以这里不再另造一套抽象格式，直接贴着你现在真实运行态写，最稳。
+
+### 2）为什么建议继续挂在 `Stop` 而不是更早的事件？
 
 因为这个检查本质上是“收尾检查”，只有当代理准备结束当前请求时，才能判断它有没有真正输出最终结论。
 
-### 2）为什么不用只提醒、不阻塞？
+### 3）为什么不用只提醒、不阻塞？
 
 因为只提醒的约束力太弱，代理很容易顺口忽略。`block` 才能把“检查是否沉淀”从软提示变成硬门槛。
 
-### 3）为什么把 prompt 单独拆文件？
+
+### 4）为什么把 prompt 单独拆文件？
 
 因为后续最常变化的是规则文案，不是代码逻辑。拆文件后，团队只改 prompt 即可。

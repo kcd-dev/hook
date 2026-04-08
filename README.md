@@ -1,245 +1,145 @@
-# Claudeception
+# hook
 
-Every time you use an AI coding agent, it starts from zero. You spend an hour debugging some obscure error, the agent figures it out, session ends. Next time you hit the same issue? Another hour.
+> Codex / OpenCode / Claude Code 通用的技能沉淀与 Hook 工作流仓库。  
+> 当前公开仓库：`https://github.com/kcd-dev/hook`
 
-This skill fixes that. When Claude Code discovers something non-obvious (a debugging technique, a workaround, some project-specific pattern), it saves that knowledge as a new skill. Next time a similar problem comes up, the skill gets loaded automatically.
+## 项目说明
 
-## Installation
+这个仓库现在已经是**你们自己的自动化版本**，默认面向 **Codex** 使用，不再把历史上的第三方仓库地址当成主安装入口。
 
-### Step 1: Clone the skill
+如果你之前在文档里看到过：
 
-**User-level (recommended)**
-
-```bash
-git clone https://github.com/blader/Claudeception.git ~/.claude/skills/claudeception
+```text
+https://github.com/blader/Claudeception.git
 ```
 
-**Project-level**
-
-```bash
-git clone https://github.com/blader/Claudeception.git .claude/skills/claudeception
-```
-
-### Step 2: Set up the activation hook (recommended)
-
-The skill can activate via semantic matching, but a hook ensures it evaluates every session for extractable knowledge.
-
-#### Option A: Use the built-in activator script
-
-##### User-level setup (recommended)
-
-1. Create the hooks directory and copy the script:
-
-```bash
-mkdir -p ~/.claude/hooks
-cp ~/.claude/skills/claudeception/scripts/claudeception-activator.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/claudeception-activator.sh
-```
-
-2. Add the hook to your global Claude settings (`~/.claude/settings.json`):
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claudeception-activator.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-##### Project-level setup
-
-1. Create the hooks directory inside your project and copy the script:
-
-```bash
-mkdir -p .claude/hooks
-cp .claude/skills/claudeception/scripts/claudeception-activator.sh .claude/hooks/
-chmod +x .claude/hooks/claudeception-activator.sh
-```
-
-2. Add the hook to your project settings (`.claude/settings.json` in the repo):
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/claudeception-activator.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-If you already have a `settings.json`, merge the `hooks` configuration into it.
-
-#### Option B: Use [`kcd-dev/hook`](https://github.com/kcd-dev/hook)
-
-If you already use `hook` as your centralized hook runner, you can register the same reminder there instead of copying the standalone shell script around.
-
-Repository:
+那是这个项目早期 README 沿袭下来的历史引用，不代表当前正式仓库入口。现在请统一以：
 
 ```text
 https://github.com/kcd-dev/hook
 ```
 
-Recommended use: keep Claudeception's knowledge-consolidation reminder as one managed hook prompt inside your shared hook system, then trigger `claudeception` only when the reminder determines there is reusable knowledge to preserve.
+为准。
 
-#### Practical integration guidance
+## 快速开始
 
-When wiring this into a generic hook runner such as `kcd-dev/hook`, the safest pattern is:
+### 1）克隆当前仓库
 
-1. attach the reminder to your **end-of-request / stop / final-response** stage, not the very beginning of the run
-2. use the prompt below as a **post-run self-check**, so the model must explicitly classify whether the result should become a skill, workflow, or prompt rule
-3. keep the final one-line verdict requirement, so every run ends with a machine-checkable consolidation status
-4. if the verdict is `技能沉淀结论：已调用 claudeception`, require the agent to actually invoke `claudeception` before finishing
+**HTTPS**
 
-This avoids the common failure mode where a hook only says "remember to learn from this" but never forces an actual yes/no consolidation decision.
+```bash
+git clone https://github.com/kcd-dev/hook.git
+```
 
-Full Codex setup guide:
+**SSH**
+
+```bash
+git clone git@github.com:kcd-dev/hook.git
+```
+
+## 中文文档入口
+
+如果你主要想看中文说明，直接看这两个文件：
+
+- `README.zh-CN.md`：中文总览与快速使用说明
+- `docs/codex-hook-setup.md`：Codex Hook 详细配置文档
+
+## Codex 版本（推荐）
+
+当前仓库优先推荐 **Codex Stop Hook** 方案，用来在每次回复结束前做一次“技能沉淀自检”。
+
+相关文件：
 
 - `docs/codex-hook-setup.md`
 - `scripts/codex-claudeception-stop-hook.py`
 - `resources/skill-sedimentation-standard-prompt.md`
 
-## Recommended knowledge-consolidation prompt
+### Codex 版适合什么场景
 
-You can place the following prompt into your hook system or agent reminder configuration. This is the exact self-check prompt used to force an explicit consolidation decision at the end of each request.
+- 想把“技能沉淀检查”设成 Codex 全局默认收尾动作
+- 想强制要求代理输出统一的沉淀结论
+- 想把 prompt 和 hook 脚本拆开管理，避免每次都改代码
+- 想避免泄漏密钥、Cookie、Session 等本机敏感信息
+
+### Codex 版核心能力
+
+1. 在 `Stop` 事件触发时检查最后一条 assistant 回复
+2. 如果没有出现 `技能沉淀结论：...`，则阻止结束
+3. 重新注入“技能沉淀自检”提示，要求代理补完
+4. 如果判断需要沉淀，必须先实际调用 `claudeception`
+
+## 推荐知识沉淀提示词
+
+你可以把下面这段提示词放进 Codex 的 prompt 文件或你自己的 hook 系统中：
 
 ```text
-完成当前请求后，不要急着结束，
-先检查这次是否产生了可复用知识。若有，先明确判断该落到哪一类：①跨仓库
-通用方法、规则、判断框架 → skill②当前仓库固定动作、命令、验收步骤 → 脚
-本 / workflow / 文档③长期约束、默认行为、提示词边界 → prompt /
-AGENTS.md以下情况默认优先判断需要沉淀：- 出现了非直觉排障或试错后才定
-位到的根因- 发现旧 skill / 旧提示词 / 旧文档已经过期，需要修补- 形成了
-以后会复用的部署、验收、排查、发布、Hook、工作流步骤- 发现了“以前以为
-是这样，其实真实运行态不是这样”的新事实如果命中任一类型，并且需要做经
-验归纳、技能提炼、旧 skill 修补或知识回灌，必须明确调用 claudeception
-来完成归纳或修补，而不是只在总结里顺口说一句“值得沉淀”。若都不命中，明
-确写“不需要沉淀”，再结束。你这次还没有给出明确的技能沉淀结论，先不要结
-束。请在完成自检后，在本次回复末尾明确追加且只追加一行：技能沉淀结论：
-不需要沉淀或技能沉淀结论：已调用 claudeception如果需要沉淀，先实际调用
-claudeception，再结束。
+完成当前请求后，不要急着结束，先检查这次是否产生了可复用知识。
+
+若有，先明确判断该落到哪一类：
+①跨仓库通用方法、规则、判断框架 → skill
+②当前仓库固定动作、命令、验收步骤 → 脚本 / workflow / 文档
+③长期约束、默认行为、提示词边界 → prompt / AGENTS.md
+
+以下情况默认优先判断需要沉淀：
+- 出现了非直觉排障或试错后才定位到的根因
+- 发现旧 skill / 旧提示词 / 旧文档已经过期，需要修补
+- 形成了以后会复用的部署、验收、排查、发布、Hook、工作流步骤
+- 发现了“以前以为是这样，其实真实运行态不是这样”的新事实
+
+如果命中任一类型，并且需要做经验归纳、技能提炼、旧 skill 修补或知识回灌，必须明确调用 claudeception 来完成归纳或修补，而不是只在总结里顺口说一句“值得沉淀”。
+
+若都不命中，明确写“不需要沉淀”，再结束。
+
+你这次还没有给出明确的技能沉淀结论，先不要结束。
+请在完成自检后，在本次回复末尾明确追加且只追加一行：
+技能沉淀结论：不需要沉淀
+或
+技能沉淀结论：已调用 claudeception
+
+如果需要沉淀，先实际调用 claudeception，再结束。
 ```
 
-What this prompt enforces:
+## Hook Runner 集成
 
-- classify the learning target first: skill / workflow / prompt
-- prefer patching stale knowledge instead of casually mentioning it
-- require an explicit final consolidation verdict on every run
-- force an actual `claudeception` call before claiming consolidation happened
+如果你已经在用通用 Hook Runner（例如你们自己的 `kcd-dev/hook` 工作流），推荐把这段提示词挂到：
 
-The hook injects a reminder on every prompt that tells Claude to evaluate whether the current task produced extractable knowledge. This achieves higher activation rates than relying on semantic description matching alone.
+- `Stop`
+- `final-response`
+- `end-of-request`
 
-## Usage
+这种**收尾阶段**，不要挂在最前面。
 
-### Automatic Mode
+原因很简单：
 
-The skill activates automatically when Claude Code:
-- Just completed debugging and discovered a non-obvious solution
-- Found a workaround through investigation or trial-and-error
-- Resolved an error where the root cause wasn't immediately apparent
-- Learned project-specific patterns or configurations through investigation
-- Completed any task where the solution required meaningful discovery
+- 这是一个“收尾检查”，不是前置检查
+- 只有在模型准备结束时，才能判断它有没有真正输出最终结论
+- 用 `block` 比纯提醒更可靠，能把软约束变成硬门槛
 
-### Explicit Mode
+## Claude / 兼容入口（历史兼容）
 
-Trigger a learning retrospective:
+仓库里仍保留了一部分面向 Claude 生态的历史说明和脚本，是为了兼容旧用法，不代表当前主推荐入口。
 
-```
-/claudeception
-```
+如果你只关心当前正式方案：
 
-Or explicitly request skill extraction:
+> **请优先使用 Codex 版本文档，不要再按旧的 `~/.claude/...` 安装说明作为主路径。**
 
-```
-Save what we just learned as a skill
-```
+## 安全说明
 
-### What Gets Extracted
+本仓库文档和脚本默认遵循以下边界：
 
-Not every task produces a skill. It only extracts knowledge that required actual discovery (not just reading docs), will help with future tasks, has clear trigger conditions, and has been verified to work.
+- 不写入 API Key
+- 不写入 Token
+- 不写入 Cookie / Session
+- 不写入生产密码
+- 不把个人机器特有路径当成公开默认值
+- 示例路径统一使用占位符或 `~/.codex/...`
 
-## Research
+## 详细文档
 
-The idea comes from academic work on skill libraries for AI agents.
-
-[Voyager](https://arxiv.org/abs/2305.16291) (Wang et al., 2023) showed that game-playing agents can build up libraries of reusable skills over time, and that this helps them avoid re-learning things they already figured out. [CASCADE](https://arxiv.org/abs/2512.23880) (2024) introduced "meta-skills" (skills for acquiring skills), which is what this is. [SEAgent](https://arxiv.org/abs/2508.04700) (2025) showed agents can learn new software environments through trial and error, which inspired the retrospective feature. [Reflexion](https://arxiv.org/abs/2303.11366) (Shinn et al., 2023) showed that self-reflection helps.
-
-Agents that persist what they learn do better than agents that start fresh.
-
-## How It Works
-
-Claude Code has a native skills system. At startup, it loads skill names and descriptions (about 100 tokens each). When you're working, it matches your current context against those descriptions and pulls in relevant skills.
-
-But this retrieval system can be written to, not just read from. So when this skill notices extractable knowledge, it writes a new skill with a description optimized for future retrieval.
-
-The description matters a lot. "Helps with database problems" won't match anything useful. "Fix for PrismaClientKnownRequestError in serverless" will match when someone hits that error.
-
-More on the skills architecture [here](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills).
-
-## Skill Format
-
-Extracted skills are markdown files with YAML frontmatter:
-
-```yaml
----
-name: prisma-connection-pool-exhaustion
-description: |
-  Fix for PrismaClientKnownRequestError: Too many database connections 
-  in serverless environments (Vercel, AWS Lambda). Use when connection 
-  count errors appear after ~5 concurrent requests.
-author: Claude Code
-version: 1.0.0
-date: 2024-01-15
----
-
-# Prisma Connection Pool Exhaustion
-
-## Problem
-[What this skill solves]
-
-## Context / Trigger Conditions
-[Exact error messages, symptoms, scenarios]
-
-## Solution
-[Step-by-step fix]
-
-## Verification
-[How to confirm it worked]
-```
-
-See `resources/skill-template.md` for the full template.
-
-## Quality Gates
-
-The skill is picky about what it extracts. If something is just a documentation lookup, or only useful for this one case, or hasn't actually been tested, it won't create a skill. Would this actually help someone who hits this problem in six months? If not, no skill.
-
-## Examples
-
-See `examples/` for sample skills:
-
-- `nextjs-server-side-error-debugging/`: errors that don't show in browser console
-- `prisma-connection-pool-exhaustion/`: the "too many connections" serverless problem
-- `typescript-circular-dependency/`: detecting and fixing import cycles
-
-## Contributing
-
-Contributions welcome. Fork, make changes, submit a PR.
+- 中文总览：`README.zh-CN.md`
+- Codex Hook 配置：`docs/codex-hook-setup.md`
+- 标准提示词：`resources/skill-sedimentation-standard-prompt.md`
+- Stop Hook 脚本：`scripts/codex-claudeception-stop-hook.py`
 
 ## License
 
