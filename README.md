@@ -109,6 +109,12 @@ When wiring this into a generic hook runner such as `kcd-dev/hook`, the safest p
 
 This avoids the common failure mode where a hook only says "remember to learn from this" but never forces an actual yes/no consolidation decision.
 
+Full Codex setup guide:
+
+- `docs/codex-hook-setup.md`
+- `scripts/codex-claudeception-stop-hook.py`
+- `resources/skill-sedimentation-standard-prompt.md`
+
 ## Recommended knowledge-consolidation prompt
 
 You can place the following prompt into your hook system or agent reminder configuration. This is the exact self-check prompt used to force an explicit consolidation decision at the end of each request.
