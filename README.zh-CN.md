@@ -15,13 +15,7 @@
 
 ## 当前正式仓库
 
-当前请统一使用：
-
-```text
-https://github.com/kcd-dev/hook
-```
-
-历史文档里出现过的 `blader/Claudeception` 只是旧引用，不再是当前正式入口。
+当前请直接以**当前仓库内容**为准。这里不再保留旧的 `blader/Claudeception` 地址，也不再把 `git clone` 作为默认说明。
 
 ## 仓库里最重要的 3 个文件
 
@@ -61,10 +55,24 @@ https://github.com/kcd-dev/hook
 
 ### 最短路径
 
-1. clone 当前仓库
+1. 直接把当前仓库复制到 `~/.codex/skills/`
 2. 按你当前 `~/.codex/hooks.json` 的真实格式，把 Stop Hook 脚本接进去
 3. 把标准提示词复制到 `~/.codex/prompts/`
 4. 让 Codex 在每次回复结束前执行收尾检查
+
+推荐复制命令：
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R /Users/houzi/.codex/skills/claudeception ~/.codex/skills/hook
+```
+
+如果你已经在当前仓库根目录：
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R . ~/.codex/skills/hook
+```
 
 ## 设计原则
 

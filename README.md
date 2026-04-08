@@ -5,36 +5,24 @@
 
 ## 项目说明
 
-这个仓库现在已经是**你们自己的自动化版本**，默认面向 **Codex** 使用，不再把历史上的第三方仓库地址当成主安装入口。
-
-如果你之前在文档里看到过：
-
-```text
-https://github.com/blader/Claudeception.git
-```
-
-那是这个项目早期 README 沿袭下来的历史引用，不代表当前正式仓库入口。现在请统一以：
-
-```text
-https://github.com/kcd-dev/hook
-```
-
-为准。
+默认面向 **Codex** 使用。
 
 ## 快速开始
 
-### 1）克隆当前仓库
+### 1）直接复制到用户级 Codex skills 目录
 
-**HTTPS**
+如果你已经在当前仓库目录中，不需要再 clone，直接复制即可：
 
 ```bash
-git clone https://github.com/kcd-dev/hook.git
+mkdir -p ~/.codex/skills
+cp -R /Users/houzi/.codex/skills/claudeception ~/.codex/skills/hook
 ```
 
-**SSH**
+如果你已经在仓库根目录，也可以用相对路径：
 
 ```bash
-git clone git@github.com:kcd-dev/hook.git
+mkdir -p ~/.codex/skills
+cp -R . ~/.codex/skills/hook
 ```
 
 ## 中文文档入口
