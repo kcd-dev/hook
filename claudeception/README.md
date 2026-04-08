@@ -8,13 +8,20 @@
 
 ## 快速开始
 
-### 1）clone 后直接复制内置的 claudeception 目录到用户级 Codex skills 目录
+### 1）直接复制到用户级 Codex skills 目录
 
-推荐命令：
+如果你已经在当前仓库目录中，不需要再 clone，直接复制即可：
 
 ```bash
 mkdir -p ~/.codex/skills
-cp -R claudeception ~/.codex/skills/claudeception
+cp -R /Users/houzi/.codex/skills/claudeception ~/.codex/skills/hook
+```
+
+如果你已经在仓库根目录，也可以用相对路径：
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R . ~/.codex/skills/hook
 ```
 
 ## 中文文档入口
