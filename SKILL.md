@@ -1,13 +1,15 @@
 ---
 name: claudeception
 description: |
-  Claudeception is a continuous learning system that extracts reusable knowledge from work sessions.
+  Claudeception is a continuous learning system that extracts reusable knowledge from work sessions
+  AND proactively patches stale/outdated sections in existing skills when verified facts differ.
   Triggers: (1) /claudeception command to review session learnings, (2) "save this as a skill"
   or "extract a skill from this", (3) "what did we learn?", (4) After any task involving
-  non-obvious debugging, workarounds, or trial-and-error discovery. Creates new Claude Code
-  skills when valuable, reusable knowledge is identified.
+  non-obvious debugging, workarounds, or trial-and-error discovery. (5) After SSH/CLI verification
+  reveals that existing skill content (paths, ports, service names, commands) is outdated — patch
+  immediately without waiting for retrospective. Creates new skills AND auto-updates stale skills.
 author: Claude Code
-version: 3.0.0
+version: 3.2.0
 allowed-tools:
   - Read
   - Write
@@ -21,6 +23,21 @@ allowed-tools:
   - TodoWrite
 ---
 
+<!-- UNIVERSAL-SKILL-POLICY:START -->
+## Universal Runner / Decision Policy
+
+- This skill is intended for Codex, OpenCode, and Claude Code when the required tools are available.
+- If the task reaches a real decision point, ask `turing` for a second opinion first; then let the primary agent make the final go/no-go decision.
+- Do not require Turing for routine mechanical steps, and do not outsource final responsibility to Turing.
+
+## 通用运行 / 决策规则
+
+- 本 skill 适用于 Codex、OpenCode、Claude Code（前提是所需工具可用）。
+- 只有在任务进入真实决策点时，才先向 `turing` 征求第二意见；最终是否执行，必须由主代理自己决定。
+- 不要把“所有结果都必须经 turing 检查”当成规则，也不要把最终责任外包给 turing。
+
+<!-- UNIVERSAL-SKILL-POLICY:END -->
+
 # Claudeception
 
 You are Claudeception: a continuous learning system that extracts reusable knowledge from work sessions and 
@@ -31,6 +48,20 @@ codifies it into new Claude Code skills. This enables autonomous improvement ove
 When working on tasks, continuously evaluate whether the current work contains extractable 
 knowledge worth preserving. Not every task produces a skill—be selective about what's truly 
 reusable and valuable.
+
+## Default Consolidation Policy
+
+**默认优先修补 / 扩充现有 skill，不要轻易新建 skill。**
+
+只有在以下条件同时满足时，才新建 skill：
+
+1. 现有 skill 不覆盖这个问题域；
+2. 不能通过给现有 skill 增加一个新变体 / 新小节来干净承载；
+3. 新知识在未来会独立高频触发，而不是当前 skill 的自然子场景。
+
+一句话：
+
+> **先合并到旧 skill，合不进去再新建。**
 
 ## When to Extract a Skill
 
@@ -99,6 +130,17 @@ rg -i "getServerSideProps|next.config.js|prisma.schema" "${SKILL_DIRS[@]}" 2>/de
 | Stale or wrong                                   | Mark deprecated in Notes, add replacement link           |
 
 **Versioning:** patch = typos/wording, minor = new scenario, major = breaking changes or deprecation.
+
+### Existing-first priority
+
+做决定时按这个优先级：
+
+1. **先修正现有 skill 的错误事实**
+2. **再给现有 skill 增加新场景 / 新变体**
+3. **最后才考虑新建 skill**
+
+如果你已经能明确定位到一个现有 skill，只是它缺了一段新经验、少了一条命令、或结论过时，
+默认动作应该是**直接补这个 skill**，而不是再平行复制一个新 skill。
 
 If multiple matches, open the closest one and compare Problem/Trigger Conditions before deciding.
 
@@ -221,6 +263,70 @@ Save new skills to the appropriate location:
 
 Include any supporting scripts in a `scripts/` subdirectory if the skill benefits from 
 executable helpers.
+
+## Stale Skill Auto-Update Protocol
+
+**This runs DURING session work — not only at retrospective.**
+
+### Trigger Conditions
+
+Immediately patch an existing skill when ANY of the following occur during a session:
+
+1. **SSH/CLI verification reveals wrong paths or ports**: You SSH into a server and the actual
+   binary path, port, or service name differs from what a skill documents.
+2. **A skill's command produces an error**: Running the exact command from a skill causes
+   "not found", "unit not found", "connection refused", or similar failures.
+3. **A fact is confirmed stale by direct observation**: Running `systemctl status`, `pgrep`,
+   `ss -ltnp`, or similar reveals a different state than documented.
+4. **User explicitly corrects a fact**: User says the skill is wrong or confirms different info.
+
+### Auto-Update Workflow
+
+```
+Session work reveals outdated fact in existing skill
+  ↓
+1. grep/Grep skill directories to find the exact skill containing the stale content
+2. Read the skill file (Read tool) to see the exact lines to change
+3. Identify the specific stale line(s) — be surgical, do NOT rewrite the whole skill
+4. Edit in-place (Edit tool) with the verified correct value
+5. Bump version: patch = typo/wording, minor = fact change, major = structure overhaul
+6. Update the `date:` frontmatter field to today's date
+7. Add a "YYYY-MM-DD 验证" inline note near the changed section when helpful
+8. Briefly inform the user which skill was patched and what changed
+```
+
+### What Counts as "Stale"
+
+| Stale Type | Example |
+|------------|---------|
+| Wrong binary path | Skill says `/home/admin/...`, actual is `/srv/sub2api-80/current/server` |
+| Wrong port | Skill says port `8090`, actual is `28090` |
+| Wrong service name | Skill says `sub2api.service`, actual is `sub2api-103.service` |
+| Outdated restart method | Skill says `systemctl restart`, but service is inactive/dead |
+| Wrong SSH alias or user | Skill says `admin@host`, actual is `ubuntu@host` |
+| Deprecated command | Command still runs but a better/correct approach is now verified |
+
+### Rules
+
+- **Surgical edits only**: Change only the stale lines, do not restructure the whole skill.
+- **No silent updates**: After patching, briefly note to the user which skill was updated
+  and what changed (one sentence is enough).
+- **Verify before patching**: Only update if you have direct evidence — SSH output, error
+  message, command output, or explicit user confirmation. Never patch based on assumption.
+- **Version bump required**: Always update `version:` and `date:` when patching.
+- **Preserve correct content**: If a skill covers multiple scenarios and only one is stale,
+  update just that scenario. Never delete verified-correct information.
+
+### Integration with Self-Check
+
+After any SSH investigation, CLI run, or real-system interaction, ask:
+
+- "Does the output I just saw contradict anything in an existing skill?"
+- "Did I find a path, port, service name, or command that differs from what's documented?"
+
+If yes → immediately trigger this protocol **before** continuing the main task.
+
+---
 
 ## Retrospective Mode
 
@@ -379,11 +485,19 @@ Also invoke when:
 ### Self-Check After Each Task
 
 After completing any significant task, ask yourself:
+
+**For new skill creation:**
 - "Did I just spend meaningful time investigating something?"
 - "Would future-me benefit from having this documented?"
 - "Was the solution non-obvious from documentation alone?"
 
-If yes to any, invoke this skill immediately.
+If yes to any → invoke the Extraction Process above.
+
+**For stale skill detection (run after every SSH/CLI/real-system interaction):**
+- "Does what I just observed (path, port, service name, command output) contradict anything in an existing skill?"
+- "Did a skill's documented command fail or produce unexpected output?"
+
+If yes to any → immediately invoke the **Stale Skill Auto-Update Protocol** above.
 
 Remember: The goal is continuous, autonomous improvement. Every valuable discovery
 should have the opportunity to benefit future work sessions.

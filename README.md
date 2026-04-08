@@ -24,7 +24,9 @@ git clone https://github.com/blader/Claudeception.git .claude/skills/claudecepti
 
 The skill can activate via semantic matching, but a hook ensures it evaluates every session for extractable knowledge.
 
-#### User-level setup (recommended)
+#### Option A: Use the built-in activator script
+
+##### User-level setup (recommended)
 
 1. Create the hooks directory and copy the script:
 
@@ -53,7 +55,7 @@ chmod +x ~/.claude/hooks/claudeception-activator.sh
 }
 ```
 
-#### Project-level setup
+##### Project-level setup
 
 1. Create the hooks directory inside your project and copy the script:
 
@@ -83,6 +85,57 @@ chmod +x .claude/hooks/claudeception-activator.sh
 ```
 
 If you already have a `settings.json`, merge the `hooks` configuration into it.
+
+#### Option B: Use [`kcd-dev/hook`](https://github.com/kcd-dev/hook)
+
+If you already use `hook` as your centralized hook runner, you can register the same reminder there instead of copying the standalone shell script around.
+
+Repository:
+
+```text
+https://github.com/kcd-dev/hook
+```
+
+Recommended use: keep Claudeception's knowledge-consolidation reminder as one managed hook prompt inside your shared hook system, then trigger `claudeception` only when the reminder determines there is reusable knowledge to preserve.
+
+#### Practical integration guidance
+
+When wiring this into a generic hook runner such as `kcd-dev/hook`, the safest pattern is:
+
+1. attach the reminder to your **end-of-request / stop / final-response** stage, not the very beginning of the run
+2. use the prompt below as a **post-run self-check**, so the model must explicitly classify whether the result should become a skill, workflow, or prompt rule
+3. keep the final one-line verdict requirement, so every run ends with a machine-checkable consolidation status
+4. if the verdict is `技能沉淀结论：已调用 claudeception`, require the agent to actually invoke `claudeception` before finishing
+
+This avoids the common failure mode where a hook only says "remember to learn from this" but never forces an actual yes/no consolidation decision.
+
+## Recommended knowledge-consolidation prompt
+
+You can place the following prompt into your hook system or agent reminder configuration. This is the exact self-check prompt used to force an explicit consolidation decision at the end of each request.
+
+```text
+完成当前请求后，不要急着结束，
+先检查这次是否产生了可复用知识。若有，先明确判断该落到哪一类：①跨仓库
+通用方法、规则、判断框架 → skill②当前仓库固定动作、命令、验收步骤 → 脚
+本 / workflow / 文档③长期约束、默认行为、提示词边界 → prompt /
+AGENTS.md以下情况默认优先判断需要沉淀：- 出现了非直觉排障或试错后才定
+位到的根因- 发现旧 skill / 旧提示词 / 旧文档已经过期，需要修补- 形成了
+以后会复用的部署、验收、排查、发布、Hook、工作流步骤- 发现了“以前以为
+是这样，其实真实运行态不是这样”的新事实如果命中任一类型，并且需要做经
+验归纳、技能提炼、旧 skill 修补或知识回灌，必须明确调用 claudeception
+来完成归纳或修补，而不是只在总结里顺口说一句“值得沉淀”。若都不命中，明
+确写“不需要沉淀”，再结束。你这次还没有给出明确的技能沉淀结论，先不要结
+束。请在完成自检后，在本次回复末尾明确追加且只追加一行：技能沉淀结论：
+不需要沉淀或技能沉淀结论：已调用 claudeception如果需要沉淀，先实际调用
+claudeception，再结束。
+```
+
+What this prompt enforces:
+
+- classify the learning target first: skill / workflow / prompt
+- prefer patching stale knowledge instead of casually mentioning it
+- require an explicit final consolidation verdict on every run
+- force an actual `claudeception` call before claiming consolidation happened
 
 The hook injects a reminder on every prompt that tells Claude to evaluate whether the current task produced extractable knowledge. This achieves higher activation rates than relying on semantic description matching alone.
 

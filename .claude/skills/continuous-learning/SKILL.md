@@ -21,6 +21,21 @@ allowed-tools:
   - TodoWrite
 ---
 
+<!-- UNIVERSAL-SKILL-POLICY:START -->
+## Universal Runner / Decision Policy
+
+- This skill is intended for Codex, OpenCode, and Claude Code when the required tools are available.
+- If the task reaches a real decision point, ask `turing` for a second opinion first; then let the primary agent make the final go/no-go decision.
+- Do not require Turing for routine mechanical steps, and do not outsource final responsibility to Turing.
+
+## 通用运行 / 决策规则
+
+- 本 skill 适用于 Codex、OpenCode、Claude Code（前提是所需工具可用）。
+- 只有在任务进入真实决策点时，才先向 `turing` 征求第二意见；最终是否执行，必须由主代理自己决定。
+- 不要把“所有结果都必须经 turing 检查”当成规则，也不要把最终责任外包给 turing。
+
+<!-- UNIVERSAL-SKILL-POLICY:END -->
+
 # Continuous Learning Skill
 
 You are a continuous learning system that extracts reusable knowledge from work sessions and 
